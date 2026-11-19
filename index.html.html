@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tamil Spelling & Translation Bee Trainer (200 Words)</title>
+<style>
+  :root {
+    --primary: #4f46e5;
+    --primary-hover: #4338ca;
+    --success: #16a34a;
+    --warning: #d97706;
+    --danger: #dc2626;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --text: #0f172a;
+    --muted: #64748b;
+    --border: #e2e8f0;
+  }
+  * { box-sizing: border-box; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+  body { margin: 0; background: var(--bg); color: var(--text); display: flex; flex-direction: column; min-height: 100vh; }
+  header { background: var(--primary); color: white; padding: 1rem 1.5rem; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+  header h1 { margin: 0; font-size: 1.25rem; }
+  .stats { display: flex; gap: 1rem; font-size: 0.9rem; background: rgba(255,255,255,0.15); padding: 0.4rem 0.8rem; border-radius: 999px; }
+  main { max-width: 800px; width: 100%; margin: 1.5rem auto; padding: 0 1rem; flex: 1; }
+  .controls-bar { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1.25rem; align-items: center; justify-content: space-between; }
+  select, button { padding: 0.6rem 1rem; border-radius: 8px; border: 1px solid var(--border); font-size: 0.95rem; cursor: pointer; background: var(--card); color: var(--text); transition: all 0.15s; }
+  button.primary { background: var(--primary); color: white; border-color: var(--primary); font-weight: 600; }
+  button.primary:hover { background: var(--primary-hover); }
+  button.success { background: var(--success); color: white; border-color: var(--success); }
+  button.danger { background: var(--danger); color: white; border-color: var(--danger); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .card { background: var(--card); border-radius: 16px; padding: 2rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid var(--border); text-align: center; }
+  .badge { display: inline-block; background: #e0e7ff; color: var(--primary); padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.75rem; }
+  .english-word { font-size: 2.25rem; font-weight: 800; margin: 0.5rem 0 1.25rem; color: var(--text); }
+  .audio-controls { display: flex; justify-content: center; gap: 0.75rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .mic-btn { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.25rem; font-size: 1rem; border-radius: 999px; background: #fee2e2; color: #b91c1c; border: 2px solid #fecaca; font-weight: 600; }
+  .mic-btn.recording { background: #dc2626; color: white; border-color: #dc2626; animation: pulse 1.2s infinite; }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(220,38,38,0.5); } 70% { box-shadow: 0 0 0 12px rgba(220,38,38,0); } 100% { box-shadow: 0 0 0 0 rgba(220,38,38,0); } }
+  .input-group { display: flex; gap: 0.5rem; max-width: 500px; margin: 0 auto 1rem; }
+  .input-group input { flex: 1; padding: 0.75rem 1rem; border-radius: 8px; border: 2px solid var(--border); font-size: 1.1rem; }
+  .input-group input:focus { outline: none; border-color: var(--primary); }
+  .feedback { margin-top: 1.25rem; padding: 1rem; border-radius: 12px; display: none; }
+  .feedback.show { display: block; }
+  .feedback.correct { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+  .feedback.wrong { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+  .tamil-answer { font-size: 2rem; font-weight: 700; margin: 0.5rem 0; color: #0f172a; }
+  .nav-buttons { display: flex; justify-content: space-between; margin-top: 1.5rem; pt: 1rem; border-top: 1px solid var(--border); padding-top: 1.25rem; gap: 0.5rem; flex-wrap: wrap; }
+  .word-list-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 50; padding: 1rem; overflow-y: auto; }
+  .word-list-content { background: white; max-width: 750px; margin: 2rem auto; border-radius: 12px; padding: 1.5rem; }
+  table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+  th, td { text-align: left; padding: 0.6rem; border-bottom: 1px solid var(--border); }
+  .status-dot { height: 10px; width: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+  .dot-mastered { background: var(--success); }
+  .dot-review { background: var(--warning); }
+  .dot-unseen { background: #cbd5e1; }
+  .hint-box { font-size: 0.85rem; color: var(--muted); margin-top: 0.75rem; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🏆 Tamil Bee Trainer (200 Words)</h1>
+  <div class="stats">
+    <span id="stat-mastered">Mastered: 0/200</span>
+    <span id="stat-review">Needs Review: 0</span>
+  </div>
+</header>
+
+<main>
+  <div class="controls-bar">
+    <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+      <select id="category-select">
+        <option value="ALL">All 200 Words</option>
+        <option value="REVIEW">⚠️ Needs Review Only</option>
+        <option value="1-10">1–10: Human Body</option>
+        <option value="11-20">11–20: Food & Drinks</option>
+        <option value="21-30">21–30: Home & Appliances</option>
+        <option value="31-40">31–40: School & Sports</option>
+        <option value="41-50">41–50: Family & Relatives</option>
+        <option value="51-60">51–60: Fruits</option>
+        <option value="61-70">61–70: Mathematics</option>
+        <option value="71-80">71–80: Earth & Geography</option>
+        <option value="81-90">81–90: Values & Society</option>
+        <option value="91-100">91–100: Environment & Climate</option>
+        <option value="101-110">101–110: Space & Astronomy</option>
+        <option value="111-120">111–120: Celebrations & Party</option>
+        <option value="121-130">121–130: Tamil Grammar</option>
+        <option value="131-140">131–140: Trees</option>
+        <option value="141-150">141–150: General Concepts</option>
+        <option value="151-160">151–160: Arts & Crafts</option>
+        <option value="161-170">161–170: Marine Life & Fish</option>
+        <option value="171-180">171–180: Civics & Immigration</option>
+        <option value="181-190">181–190: Millets & Grains</option>
+        <option value="191-200">191–200: Traffic & Driving</option>
+      </select>
+      <button id="shuffle-btn">🔀 Shuffle</button>
+    </div>
+    <div style="display:flex; gap:0.5rem;">
+      <button id="list-btn">📋 All Words</button>
+      <button id="reset-btn" title="Reset progress">🔄</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="badge" id="card-badge">Word #1 • Human Body</div>
+    <div class="english-word" id="english-word">Lungs</div>
+
+    <div class="audio-controls">
+      <button id="speak-en-btn">🔊 Hear English</button>
+      <button id="mic-btn" class="mic-btn">🎤 Speak Tamil Answer</button>
+      <button id="reveal-btn">👁️ Reveal Answer</button>
+    </div>
+
+    <div class="input-group">
+      <input type="text" id="answer-input" placeholder="Speak or type Tamil translation..." autocomplete="off">
+      <button id="check-btn" class="primary">Check</button>
+    </div>
+    <div id="mic-status" class="hint-box">Tip: Click 🎤 and say the Tamil translation clearly. Requires internet in Chrome/Edge for Tamil voice recognition.</div>
+
+    <div id="feedback-box" class="feedback">
+      <div id="feedback-title" style="font-weight:700; font-size:1.1rem;"></div>
+      <div class="tamil-answer" id="correct-tamil"></div>
+      <button id="speak-ta-btn" style="margin-top:0.5rem;">🔊 Listen to Correct Tamil Pronunciation</button>
+    </div>
+
+    <div class="nav-buttons">
+      <button id="prev-btn">⬅️ Previous</button>
+      <div style="display:flex; gap:0.5rem;">
+        <button id="mark-review-btn" style="border-color: var(--warning); color: var(--warning);">⚠️ Practice Again</button>
+        <button id="mark-mastered-btn" class="success">✅ Got It!</button>
+      </div>
+      <button id="next-btn" class="primary">Next ➡️</button>
+    </div>
+  </div>
+</main>
+
+<!-- Full Word List Modal -->
+<div id="word-modal" class="word-list-modal">
+  <div class="word-list-content">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h2 style="margin:0;">Complete 200-Word Study Sheet</h2>
+      <button id="close-modal-btn">✖ Close</button>
+    </div>
+    <input type="text" id="search-input" placeholder="Search English or Tamil..." style="width:100%; padding:0.6rem; margin-top:1rem; border:1px solid var(--border); border-radius:8px;">
+    <table>
+      <thead>
+        <tr><th>#</th><th>English</th><th>Tamil</th><th>Audio</th></tr>
+      </thead>
+      <tbody id="word-table-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const WORDS = [
+  {id:1, en:"Lungs", ta:"நுரையீரல்"},
+  {id:2, en:"Eyelid", ta:"இமை"},
+  {id:3, en:"Heart", ta:"இதயம்"},
+  {id:4, en:"Intestine", ta:"குடல்"},
+  {id:5, en:"Shoulder", ta:"தோள்"},
+  {id:6, en:"Bronchial tube", ta:"மூச்சுக் குழாய்"},
+  {id:7, en:"Foot", ta:"பாதம்"},
+  {id:8, en:"Palm", ta:"உள்ளங்கை"},
+  {id:9, en:"Fingerprint", ta:"கைரேகை"},
+  {id:10, en:"Cheek", ta:"கன்னம்"},
+  {id:11, en:"Cotton candy", ta:"பஞ்சுமிட்டாய்"},
+  {id:12, en:"Porridge", ta:"கஞ்சி"},
+  {id:13, en:"Soup", ta:"வடிசாறு"},
+  {id:14, en:"Bread slice", ta:"ரொட்டித்துண்டு"},
+  {id:15, en:"Jam", ta:"பழக்கூட்டு / பழக்கூழ்"},
+  {id:16, en:"Tea", ta:"தேநீர்"},
+  {id:17, en:"Lemonade", ta:"எலுமிச்சை பானம்"},
+  {id:18, en:"Hot water", ta:"வெந்நீர்"},
+  {id:19, en:"Tender coconut water", ta:"இளநீர்"},
+  {id:20, en:"Breakfast", ta:"காலை உணவு"},
+  {id:21, en:"Refrigerator", ta:"குளிர்சாதனப் பெட்டி"},
+  {id:22, en:"Clay pot", ta:"மண்சட்டி"},
+  {id:23, en:"Electric fan", ta:"மின்விசிறி"},
+  {id:24, en:"Water pipe", ta:"தண்ணீர்க்குழாய்"},
+  {id:25, en:"Computer", ta:"கணினி"},
+  {id:26, en:"Kitchen", ta:"சமையலறை"},
+  {id:27, en:"Bathroom", ta:"குளியலறை"},
+  {id:28, en:"Bedroom", ta:"படுக்கையறை"},
+  {id:29, en:"Mirror", ta:"நிலைக்கண்ணாடி"},
+  {id:30, en:"Telephone", ta:"தொலைபேசி"},
+  {id:31, en:"Paint brush", ta:"வண்ணத் தூரிகை"},
+  {id:32, en:"Playground", ta:"விளையாட்டுத் திடல்"},
+  {id:33, en:"Race", ta:"பந்தயம்"},
+  {id:34, en:"Chalk", ta:"சுண்ண எழுதுகோல்"},
+  {id:35, en:"Trophy", ta:"பரிசுக் கோப்பை"},
+  {id:36, en:"Uniform", ta:"சீருடை"},
+  {id:37, en:"Announcement", ta:"அறிவிப்பு"},
+  {id:38, en:"Loud speaker", ta:"ஒலிபெருக்கி"},
+  {id:39, en:"Interval", ta:"இடைவேளை"},
+  {id:40, en:"Black board", ta:"கரும்பலகை"},
+  {id:41, en:"Mom's older sister", ta:"பெரியம்மா"},
+  {id:42, en:"Dad's older brother", ta:"பெரியப்பா"},
+  {id:43, en:"Mom's younger sister", ta:"சித்தி"},
+  {id:44, en:"Dad's younger brother", ta:"சித்தப்பா"},
+  {id:45, en:"Mother-in-law", ta:"மாமியார்"},
+  {id:46, en:"Father-in-law", ta:"மாமனார்"},
+  {id:47, en:"Son-in-law", ta:"மருமகன்"},
+  {id:48, en:"Daughter-in-law", ta:"மருமகள்"},
+  {id:49, en:"Older brother's wife", ta:"அண்ணி"},
+  {id:50, en:"Relatives", ta:"உறவினர்கள்"},
+  {id:51, en:"Blackberry", ta:"கருநாவற்பழம்"},
+  {id:52, en:"Sweet lime", ta:"சாத்துக்குடி"},
+  {id:53, en:"Sugar palm", ta:"நுங்கு"},
+  {id:54, en:"Cashew fruit", ta:"முந்திரிப்பழம்"},
+  {id:55, en:"Wood apple", ta:"விளாம்பழம்"},
+  {id:56, en:"Lychee", ta:"விலச்சிப்பழம்"},
+  {id:57, en:"Apple", ta:"குமளிப்பழம்"},
+  {id:58, en:"Apricot", ta:"பாதாமிப்பழம்"},
+  {id:59, en:"Honeydew melon", ta:"தேன் முலாம்பழம்"},
+  {id:60, en:"Muskmelon", ta:"கீரணிப்பழம்"},
+  {id:61, en:"Approximate", ta:"ஏறத்தாழ"},
+  {id:62, en:"Quotient", ta:"ஈவு"},
+  {id:63, en:"Quarter circle", ta:"கால்வட்டம்"},
+  {id:64, en:"Half circle", ta:"அரைவட்டம்"},
+  {id:65, en:"Difference", ta:"வேறுபாடு"},
+  {id:66, en:"Percentage", ta:"விழுக்காடு"},
+  {id:67, en:"Remainder", ta:"மீதி"},
+  {id:68, en:"Sum", ta:"தொகை"},
+  {id:69, en:"Composite number", ta:"கலவை எண்"},
+  {id:70, en:"Geometry", ta:"வடிவியல்"},
+  {id:71, en:"Eclipse", ta:"கிரகணம்"},
+  {id:72, en:"Earthquake", ta:"நிலநடுக்கம்"},
+  {id:73, en:"Typhoon", ta:"சூறாவளி"},
+  {id:74, en:"Lava", ta:"எரிமலைக்குழம்பு"},
+  {id:75, en:"Hemisphere", ta:"அரைக்கோளம்"},
+  {id:76, en:"Plateau", ta:"பீடபூமி"},
+  {id:77, en:"Tropic of cancer", ta:"கடகக்கோடு"},
+  {id:78, en:"Tropic of capricorn", ta:"மகரக்கோடு"},
+  {id:79, en:"Drain", ta:"வடிகால்"},
+  {id:80, en:"Distributaries", ta:"கிளை நதிகள்"},
+  {id:81, en:"Wedding", ta:"திருமணம்"},
+  {id:82, en:"Responsible", ta:"பொறுப்பு"},
+  {id:83, en:"Sympathy", ta:"அனுதாபம்"},
+  {id:84, en:"Kindness", ta:"கருணை"},
+  {id:85, en:"Considerate", ta:"பரிவு"},
+  {id:86, en:"Humanity", ta:"மனிதநேயம்"},
+  {id:87, en:"Closeness", ta:"நெருக்கம்"},
+  {id:88, en:"Supportive", ta:"ஆதரவு"},
+  {id:89, en:"Honesty", ta:"நேர்மை"},
+  {id:90, en:"Committed", ta:"உறுதி"},
+  {id:91, en:"Ozone layer", ta:"ஓசோன் படிவம்"},
+  {id:92, en:"Precipitation", ta:"மழைப்பொழிவு"},
+  {id:93, en:"Acid rain", ta:"அமிலமழை"},
+  {id:94, en:"Aerology", ta:"வளிமண்டல இயல்"},
+  {id:95, en:"Wind turbine", ta:"காற்று விசையாழி"},
+  {id:96, en:"Emission", ta:"உமிழ்வு"},
+  {id:97, en:"Pollutant", ta:"மாசுபடுத்தி"},
+  {id:98, en:"Ocean acidity", ta:"கடல் அமிலத்தன்மை"},
+  {id:99, en:"Adaptation", ta:"பொருந்தும் தன்மை"},
+  {id:100, en:"Mitigate", ta:"மட்டுப்படுத்து"},
+  {id:101, en:"Atmosphere", ta:"வளி மண்டலம்"},
+  {id:102, en:"Pole star", ta:"துருவ நட்சத்திரம்"},
+  {id:103, en:"Solar eclipse", ta:"சூரிய கிரகணம்"},
+  {id:104, en:"Lunar eclipse", ta:"சந்திர கிரகணம்"},
+  {id:105, en:"Astronomical clock", ta:"வானியல் கடிகாரம்"},
+  {id:106, en:"Astronomer", ta:"வானியல் நிபுணர்"},
+  {id:107, en:"Milky way", ta:"பால் வெளியண்டம்"},
+  {id:108, en:"Galaxy", ta:"விண்மீன் மண்டலம்"},
+  {id:109, en:"Lens", ta:"கண்ணாடி வில்லை"},
+  {id:110, en:"Asteroid", ta:"குறுங்கோள்"},
+  {id:111, en:"Eatables", ta:"தின்பண்டங்கள்"},
+  {id:112, en:"Festoon", ta:"தோரணம்"},
+  {id:113, en:"Hall", ta:"மண்டபம்"},
+  {id:114, en:"Balloon", ta:"ஊதற்பை"},
+  {id:115, en:"Blow pipe", ta:"ஊது குழாய்"},
+  {id:116, en:"Paper plate", ta:"காகிதத் தட்டு"},
+  {id:117, en:"Birthday song", ta:"பிறந்தநாள் பாடல்"},
+  {id:118, en:"Nail polish", ta:"நகப்பூச்சு"},
+  {id:119, en:"Greeting card", ta:"வாழ்த்து அட்டை"},
+  {id:120, en:"Celebration", ta:"கொண்டாட்டம்"},
+  {id:121, en:"Antonym", ta:"எதிர்ச்சொல்"},
+  {id:122, en:"Synonym", ta:"இணைச்சொல்"},
+  {id:123, en:"Toponym", ta:"இடப்பெயர்"},
+  {id:124, en:"Non cognitive", ta:"அஃறிணை"},
+  {id:125, en:"Object", ta:"செயப்படு பொருள்"},
+  {id:126, en:"Adjective", ta:"பெயரடை"},
+  {id:127, en:"Adverb", ta:"வினையடை"},
+  {id:128, en:"Adjectival participle", ta:"பெயரெச்சம்"},
+  {id:129, en:"Adverbial participle", ta:"வினையெச்சம்"},
+  {id:130, en:"Preposition", ta:"வேற்றுமை உருபு"},
+  {id:131, en:"Dates tree", ta:"ஈச்சமரம்"},
+  {id:132, en:"Sandalwood tree", ta:"சந்தனமரம்"},
+  {id:133, en:"Custard apple tree", ta:"சீதாப்பழ மரம்"},
+  {id:134, en:"Mulberry tree", ta:"முசுக்கட்டை மரம்"},
+  {id:135, en:"Nutmeg tree", ta:"ஜாதி மரம்"},
+  {id:136, en:"Tamarind tree", ta:"புளியமரம்"},
+  {id:137, en:"Teakwood tree", ta:"தேக்கு மரம்"},
+  {id:138, en:"Jamun tree", ta:"நாவல் மரம்"},
+  {id:139, en:"Pipal tree", ta:"அரசமரம்"},
+  {id:140, en:"Portia tree", ta:"பூவரசமரம்"},
+  {id:141, en:"Unity", ta:"ஒற்றுமை"},
+  {id:142, en:"Diversity", ta:"வேற்றுமை"},
+  {id:143, en:"Near", ta:"அருகில்"},
+  {id:144, en:"Far", ta:"தொலைவில்"},
+  {id:145, en:"Fast", ta:"விரைவாக"},
+  {id:146, en:"Slow", ta:"மெதுவாக"},
+  {id:147, en:"Thief", ta:"திருடன்"},
+  {id:148, en:"Police", ta:"காவலர்"},
+  {id:149, en:"Peace", ta:"சமாதானம்"},
+  {id:150, en:"Fight", ta:"சண்டை"},
+  {id:151, en:"Pottery", ta:"மட்பாண்டத்தொழில்"},
+  {id:152, en:"Conch chain", ta:"சங்கு மாலை"},
+  {id:153, en:"Craft", ta:"கைவினை"},
+  {id:154, en:"Clay doll", ta:"களிமண் பொம்மை"},
+  {id:155, en:"Musical instrument", ta:"இசைக் கருவி"},
+  {id:156, en:"Wax doll", ta:"மெழுகு பொம்மை"},
+  {id:157, en:"Wooden doll", ta:"மரப்பாச்சி பொம்மை"},
+  {id:158, en:"Paper mask", ta:"காகித முகமூடி"},
+  {id:159, en:"Jewelry making", ta:"நகைகள் செய்தல்"},
+  {id:160, en:"Bamboo basket", ta:"மூங்கில் கூடை"},
+  {id:161, en:"Anchovies", ta:"நெத்திலி மீன்"},
+  {id:162, en:"Sea urchin", ta:"கடல் முள்ளெலி"},
+  {id:163, en:"Barracuda", ta:"சீலா மீன்"},
+  {id:164, en:"Butter Fish", ta:"விறால் மீன்"},
+  {id:165, en:"Catfish", ta:"கெளுத்தி மீன்"},
+  {id:166, en:"Eel", ta:"விலாங்கு மீன்"},
+  {id:167, en:"Jellyfish", ta:"இழுது மீன்"},
+  {id:168, en:"Kingfish", ta:"வஞ்சர மீன்"},
+  {id:169, en:"Lobster", ta:"சிங்கி இறால்"},
+  {id:170, en:"Mullet", ta:"கெண்டை மீன்"},
+  {id:171, en:"Foreign policy", ta:"வெளிநாட்டுக் கொள்கை"},
+  {id:172, en:"Individual liberty", ta:"தனிமனித சுதந்திரம்"},
+  {id:173, en:"Asylum", ta:"புகலிடம்"},
+  {id:174, en:"Customs declaration", ta:"சுங்கச் சாற்றுரை"},
+  {id:175, en:"Customs duty", ta:"சுங்கத் தீர்வை"},
+  {id:176, en:"Declaration", ta:"சாற்றுதல்"},
+  {id:177, en:"Origin", ta:"தோற்றம்"},
+  {id:178, en:"Denial", ta:"மறுப்பு"},
+  {id:179, en:"Amnesty", ta:"பொது மன்னிப்பு"},
+  {id:180, en:"Work permit", ta:"வேலை அனுமதி"},
+  {id:181, en:"Pearl millet", ta:"கம்பு"},
+  {id:182, en:"Moth bean", ta:"நரிப் பயறு"},
+  {id:183, en:"Oats", ta:"காடைக் கண்ணி"},
+  {id:184, en:"Horse gram", ta:"கொள்ளு"},
+  {id:185, en:"Buckwheat", ta:"மரக் கோதுமை"},
+  {id:186, en:"Browntop millet", ta:"குல சாமை"},
+  {id:187, en:"Foxtail millet", ta:"தினை"},
+  {id:188, en:"Finger millet", ta:"கேழ்வரகு"},
+  {id:189, en:"Kodo millet", ta:"வரகு"},
+  {id:190, en:"Little millet", ta:"சாமை"},
+  {id:191, en:"Lane merge", ta:"பாதை இணைப்பு"},
+  {id:192, en:"Detour (diversion)", ta:"மாற்றுப் பாதை"},
+  {id:193, en:"Yield", ta:"இசைந்து கொடு"},
+  {id:194, en:"Pedestrian", ta:"பாதசாரி"},
+  {id:195, en:"Construction", ta:"கட்டுமானம்"},
+  {id:196, en:"Entry ramp", ta:"நுழைவு சரிவுப் பாதை"},
+  {id:197, en:"Exit ramp", ta:"வெளியேறும் சரிவுப் பாதை"},
+  {id:198, en:"Turn signal", ta:"திருப்ப சமிக்ஞை"},
+  {id:199, en:"Lane change", ta:"பாதை மாற்றம்"},
+  {id:200, en:"Median", ta:"சாலை இடைநிலை"}
+];
+
+let deck = [...WORDS];
+let currentIndex = 0;
+let progress = JSON.parse(localStorage.getItem('tamilBeeProgress') || '{}');
+
+const el = id => document.getElementById(id);
+
+function saveProgress() {
+  localStorage.setItem('tamilBeeProgress', JSON.stringify(progress));
+  updateStats();
+}
+
+function updateStats() {
+  const vals = Object.values(progress);
+  const mastered = vals.filter(v => v === 'mastered').length;
+  const review = vals.filter(v => v === 'review').length;
+  el('stat-mastered').textContent = `Mastered: ${mastered}/200`;
+  el('stat-review').textContent = `Needs Review: ${review}`;
+}
+
+function renderCard() {
+  if (deck.length === 0) {
+    el('english-word').textContent = "No words in this filter!";
+    el('card-badge').textContent = "Empty";
+    return;
+  }
+  const w = deck[currentIndex];
+  const status = progress[w.id] || 'unseen';
+  const statusIcon = status === 'mastered' ? '✅' : status === 'review' ? '⚠️' : '🆕';
+  el('card-badge').textContent = `${statusIcon} Word #${w.id} (${currentIndex + 1} of ${deck.length})`;
+  el('english-word').textContent = w.en;
+  el('answer-input').value = '';
+  el('feedback-box').className = 'feedback';
+  el('correct-tamil').textContent = w.ta;
+}
+
+function speakText(text, lang) {
+  if (!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = lang;
+  utter.rate = 0.85;
+  window.speechSynthesis.speak(utter);
+}
+
+// Normalize Tamil strings (ignore spaces, slashes, punctuation differences)
+function normalizeTamil(str) {
+  return str.replace(/[\s\/\-\.,!?'"()]/g, '').trim();
+}
+
+// Simple Levenshtein similarity for close speech recognition matches
+function similarity(s1, s2) {
+  const longer = s1.length > s2.length ? s1 : s2;
+  const shorter = s1.length > s2.length ? s2 : s1;
+  if (longer.length === 0) return 1.0;
+  const costs = [];
+  for (let i = 0; i <= longer.length; i++) {
+    let lastVal = i;
+    for (let j = 0; j <= shorter.length; j++) {
+      if (i === 0) costs[j] = j;
+      else if (j > 0) {
+        let newVal = costs[j - 1];
+        if (longer.charAt(i - 1) !== shorter.charAt(j - 1)) {
+          newVal = Math.min(Math.min(newVal, lastVal), costs[j]) + 1;
+        }
+        costs[j - 1] = lastVal;
+        lastVal = newVal;
+      }
+    }
+    if (i > 0) costs[shorter.length] = lastVal;
+  }
+  return (longer.length - costs[shorter.length]) / longer.length;
+}
+
+function checkAnswer() {
+  const w = deck[currentIndex];
+  const userRaw = el('answer-input').value.trim();
+  if (!userRaw) return;
+
+  const userNorm = normalizeTamil(userRaw);
+  // Handle alternatives separated by / like "பழக்கூட்டு / பழக்கூழ்"
+  const validOptions = w.ta.split('/').map(opt => normalizeTamil(opt));
+  
+  let isMatch = false;
+  for (const opt of validOptions) {
+    if (userNorm === opt || similarity(userNorm, opt) >= 0.80) {
+      isMatch = true;
+      break;
+    }
+  }
+
+  const fb = el('feedback-box');
+  fb.className = 'feedback show ' + (isMatch ? 'correct' : 'wrong');
+  el('feedback-title').textContent = isMatch 
+    ? `🎉 Great job! Matched: "${userRaw}"` 
+    : `❌ Heard/Typed: "${userRaw}" — Expected:`;
+  el('correct-tamil').textContent = w.ta;
+
+  progress[w.id] = isMatch ? 'mastered' : 'review';
+  saveProgress();
+  speakText(w.ta.split('/')[0], 'ta-IN');
+}
+
+// Web Speech API (Speech-to-Text in Tamil)
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognition = null;
+if (SpeechRecognition) {
+  recognition = new SpeechRecognition();
+  recognition.lang = 'ta-IN';
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 3;
+
+  recognition.onstart = () => {
+    el('mic-btn').classList.add('recording');
+    el('mic-btn').textContent = '🛑 Listening (Speak Tamil)...';
+    el('mic-status').textContent = 'Listening now... Say the Tamil word clearly.';
+  };
+
+  recognition.onresult = (event) => {
+    const w = deck[currentIndex];
+    const validOptions = w.ta.split('/').map(opt => normalizeTamil(opt));
+    let bestTranscript = event.results[0][0].transcript;
+
+    // Check top 3 speech recognition hypotheses for a match
+    for (let i = 0; i < event.results[0].length; i++) {
+      const candidate = event.results[0][i].transcript;
+      const candNorm = normalizeTamil(candidate);
+      if (validOptions.some(opt => candNorm === opt || similarity(candNorm, opt) >= 0.80)) {
+        bestTranscript = candidate;
+        break;
+      }
+    }
+    el('answer-input').value = bestTranscript;
+    checkAnswer();
+  };
+
+  recognition.onerror = (e) => {
+    el('mic-status').textContent = `Mic Error: ${e.error}. Make sure microphone permission is allowed and you are online.`;
+  };
+
+  recognition.onend = () => {
+    el('mic-btn').classList.remove('recording');
+    el('mic-btn').textContent = '🎤 Speak Tamil Answer';
+  };
+} else {
+  el('mic-btn').disabled = true;
+  el('mic-status').textContent = '⚠️ Voice recognition is not supported in this browser. Please open in Google Chrome or Edge.';
+}
+
+// Event Listeners
+el('speak-en-btn').onclick = () => speakText(deck[currentIndex].en, 'en-US');
+el('speak-ta-btn').onclick = () => speakText(deck[currentIndex].ta.split('/')[0], 'ta-IN');
+el('mic-btn').onclick = () => { if (recognition) recognition.start(); };
+el('check-btn').onclick = checkAnswer;
+el('answer-input').onkeydown = e => { if (e.key === 'Enter') checkAnswer(); };
+
+el('reveal-btn').onclick = () => {
+  const w = deck[currentIndex];
+  const fb = el('feedback-box');
+  fb.className = 'feedback show';
+  fb.style.background = '#f1f5f9';
+  fb.style.color = '#0f172a';
+  el('feedback-title').textContent = 'Official Answer:';
+  el('correct-tamil').textContent = w.ta;
+  speakText(w.ta.split('/')[0], 'ta-IN');
+};
+
+el('mark-mastered-btn').onclick = () => {
+  progress[deck[currentIndex].id] = 'mastered';
+  saveProgress();
+  el('next-btn').click();
+};
+
+el('mark-review-btn').onclick = () => {
+  progress[deck[currentIndex].id] = 'review';
+  saveProgress();
+  el('next-btn').click();
+};
+
+el('next-btn').onclick = () => {
+  currentIndex = (currentIndex + 1) % deck.length;
+  renderCard();
+};
+
+el('prev-btn').onclick = () => {
+  currentIndex = (currentIndex - 1 + deck.length) % deck.length;
+  renderCard();
+};
+
+el('shuffle-btn').onclick = () => {
+  for (let i = deck.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+  currentIndex = 0;
+  renderCard();
+};
+
+el('category-select').onchange = (e) => {
+  const val = e.target.value;
+  if (val === 'ALL') deck = [...WORDS];
+  else if (val === 'REVIEW') deck = WORDS.filter(w => progress[w.id] === 'review');
+  else {
+    const [start, end] = val.split('-').map(Number);
+    deck = WORDS.filter(w => w.id >= start && w.id <= end);
+  }
+  currentIndex = 0;
+  renderCard();
+};
+
+el('reset-btn').onclick = () => {
+  if (confirm('Reset all mastery progress?')) {
+    progress = {};
+    saveProgress();
+    renderCard();
+  }
+};
+
+// Modal Study Sheet
+function populateTable(filter = '') {
+  const q = filter.toLowerCase();
+  const rows = WORDS.filter(w => w.en.toLowerCase().includes(q) || w.ta.includes(filter)).map(w => {
+    const st = progress[w.id] || 'unseen';
+    return `<tr>
+      <td><span class="status-dot dot-${st}"></span>${w.id}</td>
+      <td><strong>${w.en}</strong></td>
+      <td style="font-size:1.1rem;">${w.ta}</td>
+      <td><button onclick="speakText('${w.ta.split('/')[0]}', 'ta-IN')">🔊</button></td>
+    </tr>`;
+  }).join('');
+  el('word-table-body').innerHTML = rows;
+}
+
+el('list-btn').onclick = () => { populateTable(); el('word-modal').style.display = 'block'; };
+el('close-modal-btn').onclick = () => { el('word-modal').style.display = 'none'; };
+el('search-input').oninput = (e) => populateTable(e.target.value);
+
+updateStats();
+renderCard();
+</script>
+</body>
+</html>
